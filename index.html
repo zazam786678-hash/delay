@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>$DELAY — Just One More Trade</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;600;700&family=Caveat:wght@600;700&family=DM+Mono:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --red: #e8281e;
+  --red-dim: #7a1410;
+  --orange: #d96c00;
+  --yellow: #f0c040;
+  --bg: #080808;
+  --bg2: #0e0e0e;
+  --card: #111111;
+  --border: rgba(232,40,30,0.18);
+  --text: #ddd5c8;
+  --muted: #6a5f58;
+}
+
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'DM Mono', monospace;
+  overflow-x: hidden;
+}
+
+/* ── ATMOSPHERE ── */
+.atmo {
+  position: fixed; inset: 0; pointer-events: none; z-index: 0;
+  background:
+    radial-gradient(ellipse 60% 50% at 15% 40%, rgba(180,20,10,0.07) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 60% at 85% 70%, rgba(140,30,10,0.05) 0%, transparent 70%);
+}
+
+/* ── NAV ── */
+nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  background: rgba(8,8,8,0.92);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(14px);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; height: 56px;
+}
+.nav-logo {
+  font-family: 'Oswald', sans-serif;
+  font-size: 22px; font-weight: 700;
+  color: var(--red); letter-spacing: 0.1em;
+}
+.nav-links {
+  display: flex; gap: 28px;
+  list-style: none;
+}
+.nav-links a {
+  color: var(--muted); text-decoration: none;
+  font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase;
+  transition: color 0.2s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-buy {
+  font-family: 'Oswald', sans-serif;
+  font-size: 14px; letter-spacing: 0.1em;
+  background: var(--red); color: #fff;
+  border: none; padding: 9px 22px; cursor: pointer;
+  transition: opacity 0.2s;
+}
+.nav-buy:hover { opacity: 0.85; }
+
+/* ── TICKER ── */
+.ticker {
+  position: fixed; top: 56px; left: 0; right: 0; z-index: 199;
+  background: rgba(232,40,30,0.1);
+  border-bottom: 1px solid var(--border);
+  padding: 6px 0; overflow: hidden;
+  font-size: 11px; letter-spacing: 0.1em; color: var(--red);
+  white-space: nowrap;
+}
+.ticker-inner { display: inline-block; animation: tick 22s linear infinite; }
+@keyframes tick { to { transform: translateX(-50%); } }
+
+/* ── HERO ── */
+.hero {
+  position: relative; z-index: 2;
+  min-height: 100vh;
+  display: flex; flex-direction: column;
+  align-items: flex-start; justify-content: center;
+  padding: 140px 64px 80px;
+  max-width: 1200px; margin: 0 auto;
+}
+
+.hero-eyebrow {
+  font-size: 10px; letter-spacing: 0.35em; text-transform: uppercase;
+  color: var(--red); opacity: 0.7; margin-bottom: 24px;
+}
+
+.hero-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(100px, 16vw, 190px);
+  font-weight: 700; line-height: 0.87;
+  letter-spacing: -0.01em;
+  margin-bottom: 28px;
+}
+.hero-title .red { color: var(--red); }
+.hero-title .dim { color: #2a2a2a; }
+
+.hero-sub {
+  font-family: 'Caveat', cursive;
+  font-size: clamp(22px, 3.5vw, 38px);
+  color: var(--yellow);
+  transform: rotate(-1deg);
+  display: inline-block;
+  margin-bottom: 14px;
+}
+
+.hero-p {
+  font-size: 13px; color: var(--muted);
+  letter-spacing: 0.08em; max-width: 500px;
+  line-height: 1.8; margin-bottom: 48px;
+}
+
+/* ── DELAY TIMER ── */
+.delay-timer-wrap {
+  margin-bottom: 48px;
+}
+.delay-timer-label {
+  font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 14px;
+}
+.delay-timer {
+  display: flex; gap: 12px; align-items: flex-end;
+}
+.dt-block {
+  background: var(--card);
+  border: 1px solid var(--border);
+  padding: 18px 22px 14px;
+  min-width: 88px; text-align: center;
+  position: relative;
+}
+.dt-block::after {
+  content: '';
+  position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  background: var(--red);
+  transform-origin: left;
+  animation: drain var(--drain-dur, 60s) linear infinite;
+}
+@keyframes drain { 0%{transform:scaleX(1)} 100%{transform:scaleX(0)} }
+.dt-num {
+  font-family: 'Oswald', sans-serif;
+  font-size: 52px; color: var(--red); line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.dt-unit {
+  font-size: 9px; letter-spacing: 0.2em; text-transform: uppercase;
+  color: var(--muted); margin-top: 6px;
+}
+.dt-sep {
+  font-family: 'Oswald', sans-serif;
+  font-size: 42px; color: var(--red-dim);
+  padding-bottom: 18px; opacity: 0.5;
+}
+
+/* ── EXCUSE ROTATOR ── */
+.excuse-rotator {
+  background: var(--red);
+  color: #fff;
+  font-family: 'Caveat', cursive;
+  font-size: clamp(18px, 2.5vw, 26px);
+  padding: 12px 28px;
+  display: inline-block;
+  transform: rotate(-1deg);
+  margin-bottom: 36px;
+  min-width: 340px;
+  transition: opacity 0.4s;
+}
+
+.hero-cta { display: flex; gap: 14px; flex-wrap: wrap; }
+.btn {
+  font-family: 'Oswald', sans-serif;
+  font-size: 17px; letter-spacing: 0.1em;
+  padding: 13px 34px; border: none; cursor: pointer;
+  transition: all 0.15s;
+}
+.btn-red { background: var(--red); color: #fff; }
+.btn-red:hover { opacity: 0.88; transform: translateY(-2px); }
+.btn-outline {
+  background: transparent; color: var(--text);
+  border: 1px solid rgba(255,255,255,0.12);
+}
+.btn-outline:hover { border-color: var(--red); color: var(--red); }
+
+/* ── SECTION COMMON ── */
+section { position: relative; z-index: 2; }
+.section-inner { max-width: 1100px; margin: 0 auto; padding: 90px 40px; }
+.s-label {
+  font-size: 10px; letter-spacing: 0.3em; text-transform: uppercase;
+  color: var(--red); opacity: 0.65; margin-bottom: 14px;
+}
+.s-title {
+  font-family: 'Oswald', sans-serif;
+  font-size: clamp(36px, 6vw, 68px);
+  font-weight: 700; line-height: 1.0;
+  color: var(--text); margin-bottom: 50px;
+}
+
+hr.divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 0;
+}
+
+/* ── STATS BAR ── */
+.stats-bar {
+  background: var(--card);
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+.stats-bar .section-inner {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0; padding: 0;
+}
+.stat-cell {
+  padding: 40px 32px;
+  border-right: 1px solid var(--border);
+  text-align: center;
+}
+.stat-cell:last-child { border-right: none; }
+.stat-val {
+  font-family: 'Oswald', sans-serif;
+  font-size: 48px; color: var(--red); line-height: 1;
+  margin-bottom: 8px;
+}
+.stat-lbl {
+  font-size: 10px; letter-spacing: 0.18em;
+  text-transform: uppercase; color: var(--muted);
+}
+.stat-note {
+  font-family: 'Caveat', cursive;
+  font-size: 15px; color: var(--orange);
+  margin-top: 5px; opacity: 0.75;
+}
+
+/* ── EXCUSE WALL ── */
+.excuse-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+}
+.exc-card {
+  background: var(--card);
+  padding: 30px 28px;
+  position: relative;
+  transition: background 0.2s;
+  cursor: default;
+}
+.exc-card:hover { background: #161616; }
+.exc-n {
+  font-family: 'Oswald', sans-serif;
+  font-size: 52px; color: rgba(232,40,30,0.1);
+  position: absolute; top: 10px; right: 14px; line-height: 1;
+}
+.exc-q {
+  font-family: 'Caveat', cursive;
+  font-size: 22px; color: var(--yellow);
+  margin-bottom: 10px; line-height: 1.35;
+}
+.exc-t {
+  font-size: 11px; color: var(--muted);
+  letter-spacing: 0.06em; font-style: italic;
+}
+
+/* ── LIVE FEED ── */
+.feed {
+  display: flex; flex-direction: column; gap: 0;
+  border: 1px solid var(--border);
+}
+.feed-item {
+  display: flex; align-items: center; gap: 20px;
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+  transition: background 0.2s;
+  animation: feedIn 0.4s ease;
+}
+@keyframes feedIn {
+  from { opacity: 0; transform: translateX(-10px); }
+  to   { opacity: 1; transform: none; }
+}
+.feed-item:last-child { border-bottom: none; }
+.feed-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--red); flex-shrink: 0;
+  box-shadow: 0 0 8px rgba(232,40,30,0.6);
+  animation: pulse 2s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%,100%{ opacity:1; transform:scale(1); }
+  50%{ opacity:0.5; transform:scale(0.7); }
+}
+.feed-text { font-size: 12px; color: var(--muted); flex: 1; line-height: 1.5; }
+.feed-text b { color: var(--text); font-weight: 500; }
+.feed-time { font-size: 10px; color: var(--red-dim); letter-spacing: 0.1em; flex-shrink: 0; }
+
+/* ── TOKENOMICS ── */
+.tok-rows { display: flex; flex-direction: column; gap: 16px; }
+.tok-row {
+  display: grid;
+  grid-template-columns: 220px 1fr 70px;
+  align-items: center; gap: 18px;
+}
+.tok-name { font-size: 12px; color: var(--muted); text-align: right; letter-spacing: 0.06em; }
+.tok-track { height: 30px; background: #1a1a1a; position: relative; overflow: hidden; }
+.tok-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--red), var(--orange));
+  transition: width 1.6s cubic-bezier(0.16,1,0.3,1);
+}
+.tok-fill::after {
+  content:''; position:absolute; right:0; top:0; bottom:0;
+  width:2px; background:rgba(255,255,255,0.25);
+}
+.tok-pct {
+  font-family:'Oswald',sans-serif; font-size:22px; color:var(--red);
+}
+.tok-note {
+  font-family:'Caveat',cursive; font-size:13px; color:var(--orange);
+  opacity:0.55; grid-column:1/-1; text-align:center; margin-top:-4px;
+}
+
+/* ── ROADMAP ── */
+.road {
+  border-left: 1px solid var(--border);
+  padding-left: 44px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.road-item {
+  padding: 0 0 50px;
+  position: relative;
+}
+.road-item::before {
+  content:''; position:absolute;
+  left:-49px; top:8px;
+  width:10px; height:10px; border-radius:50%;
+  background:var(--red); box-shadow:0 0 14px rgba(232,40,30,0.5);
+}
+.road-phase {
+  font-size:10px; letter-spacing:0.25em; text-transform:uppercase;
+  color:var(--red); opacity:0.55; margin-bottom:6px;
+}
+.road-title {
+  font-family:'Oswald',sans-serif; font-size:26px;
+  color:var(--text); margin-bottom:10px;
+}
+.road-desc {
+  font-size:13px; color:var(--muted); line-height:1.85; max-width:600px;
+}
+.road-desc b { color:var(--orange); font-weight:normal; }
+
+/* ── TESTIMONIALS ── */
+.testi-grid {
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:20px;
+}
+.testi {
+  border:1px solid var(--border); padding:30px; position:relative;
+  transition:border-color 0.2s;
+}
+.testi:hover { border-color:rgba(232,40,30,0.4); }
+.testi::before {
+  content:'"'; font-family:'Oswald',sans-serif;
+  font-size:90px; color:var(--red); opacity:0.1;
+  position:absolute; top:-4px; left:14px; line-height:1;
+}
+.testi-body {
+  font-family:'Caveat',cursive; font-size:20px;
+  color:var(--text); line-height:1.5; margin-bottom:18px; padding-top:24px;
+  opacity:0.85;
+}
+.testi-author { font-size:10px; letter-spacing:0.18em; text-transform:uppercase; color:var(--red); opacity:0.6; }
+.testi-pnl { font-family:'Oswald',sans-serif; font-size:13px; color:var(--muted); margin-top:4px; }
+
+/* ── JOIN SECTION ── */
+.join-section {
+  text-align:center;
+  background:var(--card);
+  border-top:1px solid var(--border);
+}
+.join-section .section-inner { padding:100px 40px; }
+.join-title {
+  font-family:'Oswald',sans-serif;
+  font-size:clamp(48px,9vw,100px); font-weight:700;
+  line-height:0.9; margin-bottom:24px;
+}
+.join-title span { color:var(--red); }
+.join-sub {
+  font-family:'Caveat',cursive; font-size:24px;
+  color:var(--yellow); margin-bottom:40px; display:inline-block;
+  transform:rotate(-0.8deg);
+}
+.join-btns { display:flex; gap:14px; justify-content:center; flex-wrap:wrap; }
+
+/* ── FOOTER ── */
+footer {
+  position:relative; z-index:2;
+  border-top:1px solid var(--border);
+  padding:36px 40px;
+  display:flex; align-items:center; justify-content:space-between;
+  flex-wrap:wrap; gap:16px;
+}
+.footer-logo { font-family:'Oswald',sans-serif; font-size:24px; color:var(--red); letter-spacing:0.1em; }
+.footer-disc { font-size:10px; color:var(--muted); max-width:600px; line-height:1.7; letter-spacing:0.04em; }
+
+/* ── BOTTOM TICKER ── */
+.bticker {
+  position:fixed; bottom:0; left:0; right:0; z-index:200;
+  background:rgba(10,5,5,0.94);
+  border-top:1px solid rgba(232,40,30,0.2);
+  padding:7px 0; overflow:hidden;
+  font-size:11px; color:var(--red); letter-spacing:0.08em;
+  backdrop-filter:blur(8px);
+  white-space:nowrap;
+}
+.bticker-inner { display:inline-block; animation:tick 28s linear infinite; }
+
+/* ── REVEAL ── */
+.reveal { opacity:0; transform:translateY(20px); transition:all 0.6s ease; }
+.reveal.on { opacity:1; transform:none; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width:4px; }
+::-webkit-scrollbar-track { background:#0a0a0a; }
+::-webkit-scrollbar-thumb { background:var(--red-dim); }
+</style>
+</head>
+<body>
+
+<div class="atmo"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">$DELAY</div>
+  <ul class="nav-links">
+    <li><a href="#about">About</a></li>
+    <li><a href="#tokenomics">Tokenomics</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#community">Community</a></li>
+  </ul>
+  <button class="nav-buy" onclick="buyClick()">BUY $DELAY</button>
+</nav>
+
+<!-- TOP TICKER -->
+<div class="ticker">
+  <span class="ticker-inner">
+    🩸 $DELAY +69,420% &nbsp;|&nbsp; 
+    @user4821 just said "one more trade" for the 17th time &nbsp;|&nbsp; 
+    MC: $4.2M &nbsp;|&nbsp; 
+    HOLDERS: 12,847 (all still watching) &nbsp;|&nbsp; 
+    "I'll quit after this candle closes" — 6hrs ago &nbsp;|&nbsp; 
+    NOT FINANCIAL ADVICE &nbsp;|&nbsp; 
+    🩸 $DELAY +69,420% &nbsp;|&nbsp; 
+    @user4821 just said "one more trade" for the 17th time &nbsp;|&nbsp; 
+    MC: $4.2M &nbsp;|&nbsp; 
+    HOLDERS: 12,847 (all still watching) &nbsp;|&nbsp; 
+    "I'll quit after this candle closes" — 6hrs ago &nbsp;|&nbsp; 
+    NOT FINANCIAL ADVICE &nbsp;|&nbsp;
+  </span>
+</div>
+
+<!-- HERO -->
+<div style="position:relative;z-index:2;">
+  <div class="hero">
+    <div class="hero-eyebrow">THE OFFICIAL COIN OF "JUST ONE MORE TRADE"</div>
+    <h1 class="hero-title">
+      <span class="red">$</span>DE<span class="dim">—</span>LAY
+    </h1>
+    <div class="hero-sub">"I'll quit after this one. I swear."</div>
+    <p class="hero-p">The memecoin for traders who were supposed to stop 47 trades ago. No judges. Only solidarity, delayed regrets, and 4am candle watching.</p>
+
+    <!-- DELAY TIMER -->
+    <div class="delay-timer-wrap">
+      <div class="delay-timer-label">⏱ time until you quit trading (resets constantly)</div>
+      <div class="delay-timer">
+        <div class="dt-block" style="--drain-dur:3600s">
+          <div class="dt-num" id="cd-h">00</div>
+          <div class="dt-unit">hours</div>
+        </div>
+        <div class="dt-sep">:</div>
+        <div class="dt-block" style="--drain-dur:60s">
+          <div class="dt-num" id="cd-m">00</div>
+          <div class="dt-unit">mins</div>
+        </div>
+        <div class="dt-sep">:</div>
+        <div class="dt-block" style="--drain-dur:1s">
+          <div class="dt-num" id="cd-s">00</div>
+          <div class="dt-unit">secs</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="excuse-rotator" id="excuse-rot">"just one more trade and I'm actually done"</div>
+
+    <div class="hero-cta">
+      <button class="btn btn-red" onclick="buyClick()">🩸 BUY $DELAY</button>
+      <button class="btn btn-outline" onclick="quitClick()">I'M DONE TRADING (lol)</button>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- STATS -->
+<div class="stats-bar" id="about">
+  <div class="section-inner">
+    <div class="stat-cell reveal">
+      <div class="stat-val">∞</div>
+      <div class="stat-lbl">Times holders said "last trade"</div>
+      <div class="stat-note">every single time they meant it</div>
+    </div>
+    <div class="stat-cell reveal">
+      <div class="stat-val" id="holders-live">12,847</div>
+      <div class="stat-lbl">Holders</div>
+      <div class="stat-note">all "just watching"</div>
+    </div>
+    <div class="stat-cell reveal">
+      <div class="stat-val">0</div>
+      <div class="stat-lbl">People who actually quit</div>
+      <div class="stat-note">they came back</div>
+    </div>
+    <div class="stat-cell reveal">
+      <div class="stat-val">4am</div>
+      <div class="stat-lbl">Average trading hour</div>
+      <div class="stat-note">tomorrow we sleep early</div>
+    </div>
+    <div class="stat-cell reveal">
+      <div class="stat-val">$4.2M</div>
+      <div class="stat-lbl">Community losses (claimed)</div>
+      <div class="stat-note">we're not judging</div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider">
+
+<!-- EXCUSE WALL -->
+<section>
+  <div class="section-inner">
+    <div class="s-label reveal">The $DELAY Manifesto</div>
+    <h2 class="s-title reveal">You know all<br>these people.</h2>
+    <div class="excuse-grid">
+      <div class="exc-card reveal"><div class="exc-n">01</div>
+        <div class="exc-q">"One more trade to recover my losses"</div>
+        <div class="exc-t">Translation: I am about to lose significantly more money</div>
+      </div>
+      <div class="exc-card reveal"><div class="exc-n">02</div>
+        <div class="exc-q">"I'll quit once I break even"</div>
+        <div class="exc-t">Translation: I will never break even</div>
+      </div>
+      <div class="exc-card reveal"><div class="exc-n">03</div>
+        <div class="exc-q">"This one's different, I did my research"</div>
+        <div class="exc-t">Translation: I spent 4 minutes on Twitter at 3am</div>
+      </div>
+      <div class="exc-card reveal"><div class="exc-n">04</div>
+        <div class="exc-q">"I'll stop after this bull run"</div>
+        <div class="exc-t">Translation: There is always another bull run</div>
+      </div>
+      <div class="exc-card reveal"><div class="exc-n">05</div>
+        <div class="exc-q">"Just waiting for the right entry"</div>
+        <div class="exc-t">Translation: I have been awake for 31 hours</div>
+      </div>
+      <div class="exc-card reveal"><div class="exc-n">06</div>
+        <div class="exc-q">"I'm not addicted, I can stop anytime"</div>
+        <div class="exc-t">Translation: I am definitely addicted</div>
+      </div>
+      <div class="exc-card reveal"><div class="exc-n">07</div>
+        <div class="exc-q">"Let me just set this stop loss first"</div>
+        <div class="exc-t">Translation: I will ignore the stop loss</div>
+      </div>
+      <div class="exc-card reveal"><div class="exc-n">08</div>
+        <div class="exc-q">"I'll check the chart one last time"</div>
+        <div class="exc-t">Translation: I will check it 47 more times tonight</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- LIVE FEED -->
+<section style="background:var(--bg2)">
+  <div class="section-inner">
+    <div class="s-label reveal">Live Community Feed</div>
+    <h2 class="s-title reveal">Real-time delays<br>happening right now.</h2>
+    <div class="feed" id="live-feed">
+      <div class="feed-item">
+        <div class="feed-dot"></div>
+        <div class="feed-text"><b>@notaddicted_ser</b> just said "one more trade" for the 14th time today</div>
+        <div class="feed-time">just now</div>
+      </div>
+      <div class="feed-item">
+        <div class="feed-dot"></div>
+        <div class="feed-text"><b>@4amcandles</b> set 3 alarms to stop trading. moved them all forward.</div>
+        <div class="feed-time">2m ago</div>
+      </div>
+      <div class="feed-item">
+        <div class="feed-dot"></div>
+        <div class="feed-text"><b>@breakeven_soon</b> told wife he's done. opened chart 30 seconds later.</div>
+        <div class="feed-time">5m ago</div>
+      </div>
+      <div class="feed-item">
+        <div class="feed-dot"></div>
+        <div class="feed-text"><b>@justonemore_real</b> bought $DELAY. said it's his "last purchase ever."</div>
+        <div class="feed-time">8m ago</div>
+      </div>
+      <div class="feed-item">
+        <div class="feed-dot"></div>
+        <div class="feed-text"><b>@gm_never_gn</b> has been "watching not trading" for 6 consecutive hours</div>
+        <div class="feed-time">11m ago</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- TESTIMONIALS -->
+<section>
+  <div class="section-inner">
+    <div class="s-label reveal">Community Voices</div>
+    <h2 class="s-title reveal">Real quotes from<br>real degenerates.</h2>
+    <div class="testi-grid">
+      <div class="testi reveal">
+        <div class="testi-body">I told my wife I was done. Then $DELAY launched. Then I told her I was done again. $DELAY is literally me.</div>
+        <div class="testi-author">@notaddicted_crypto</div>
+        <div class="testi-pnl">PnL this month: -$11,400 (she doesn't know)</div>
+      </div>
+      <div class="testi reveal">
+        <div class="testi-body">Set 6 alarms to stop at midnight. Moved them all forward. It is now 4:47am. I just bought more $DELAY.</div>
+        <div class="testi-author">@justonemore_ser</div>
+        <div class="testi-pnl">PnL: actually up $300, refuses to cash out</div>
+      </div>
+      <div class="testi reveal">
+        <div class="testi-body">Quit trading 11 times in 3 weeks. Each time I found $DELAY, which made me want to trade more. Perfect design.</div>
+        <div class="testi-author">@gm_forever_gn_never</div>
+        <div class="testi-pnl">PnL: "it's a long term hold"</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- TOKENOMICS -->
+<section style="background:var(--bg2)" id="tokenomics">
+  <div class="section-inner">
+    <div class="s-label reveal">Tokenomics</div>
+    <h2 class="s-title reveal">Supply breakdown.<br>(audit delayed)</h2>
+    <div class="tok-rows reveal" id="tok-rows">
+      <div class="tok-row">
+        <div class="tok-name">Public — "just buy"</div>
+        <div class="tok-track"><div class="tok-fill" data-pct="60"></div></div>
+        <div class="tok-pct">60%</div>
+      </div>
+      <div class="tok-row">
+        <div class="tok-name">Community rewards</div>
+        <div class="tok-track"><div class="tok-fill" data-pct="20"></div></div>
+        <div class="tok-pct">20%</div>
+      </div>
+      <div class="tok-row">
+        <div class="tok-name">Marketing / memes</div>
+        <div class="tok-track"><div class="tok-fill" data-pct="12"></div></div>
+        <div class="tok-pct">12%</div>
+      </div>
+      <div class="tok-row">
+        <div class="tok-name">Team (vested 4yrs*)</div>
+        <div class="tok-track"><div class="tok-fill" data-pct="5"></div></div>
+        <div class="tok-pct">5%</div>
+      </div>
+      <div class="tok-row">
+        <div class="tok-name">"One last reserve"</div>
+        <div class="tok-track"><div class="tok-fill" data-pct="3" style="background:linear-gradient(90deg,#333,#444)"></div></div>
+        <div class="tok-pct" style="color:var(--muted)">3%</div>
+      </div>
+      <div class="tok-note">*vesting subject to indefinite "just one more month" extensions</div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ROADMAP -->
+<section id="roadmap">
+  <div class="section-inner">
+    <div class="s-label reveal">Roadmap</div>
+    <h2 class="s-title reveal">The plan.<br>(timeline TBD as always)</h2>
+    <div class="road">
+      <div class="road-item reveal">
+        <div class="road-phase">Phase 1 — "Any Day Now"</div>
+        <div class="road-title">Launch & Avoid Responsibility</div>
+        <div class="road-desc">Token deployed. Stealth launch announced 7 times. Community forms. <b>First person to say "one more trade" in Telegram gets a Founder role.</b> Liquidity locked (for now). We get a logo.</div>
+      </div>
+      <div class="road-item reveal">
+        <div class="road-phase">Phase 2 — "We Meant To Do This"</div>
+        <div class="road-title">The Delay Economy Expands</div>
+        <div class="road-desc">CEX listing applications submitted. <b>We will follow up on them next week.</b> Community meme contest. NFT collection — 10,000 "almost quit" screenshots. Merch store (hoodies that say "one more" on the back).</div>
+      </div>
+      <div class="road-item reveal">
+        <div class="road-phase">Phase 3 — "Soon™"</div>
+        <div class="road-title">$DELAY Goes Mainstream</div>
+        <div class="road-desc">Major exchange listing. <b>Influencer partnerships with people who are also bad at quitting things.</b> Mobile app that locks your trading apps — but has a bypass button. $DELAY DAO votes on what to delay next.</div>
+      </div>
+      <div class="road-item reveal">
+        <div class="road-phase">Phase 4 — "We Swear"</div>
+        <div class="road-title">Endgame (Allegedly)</div>
+        <div class="road-desc"><b>Global reserve currency of procrastination.</b> Annual $DELAY Awards for most creative reason to not stop trading. Everyone who bought early retires. We'll plan the details next quarter.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- JOIN -->
+<section class="join-section" id="community">
+  <div class="section-inner">
+    <h2 class="join-title reveal">WE WERE<br>SUPPOSED TO<br><span>STOP.</span></h2>
+    <div class="join-sub reveal">we didn't. welcome home.</div>
+    <div class="join-btns reveal">
+      <button class="btn btn-red" onclick="buyClick()">🩸 BUY $DELAY</button>
+      <button class="btn btn-outline" onclick="window.open('https://twitter.com','_blank')">𝕏 JOIN COMMUNITY</button>
+      <button class="btn btn-outline" onclick="window.open('https://t.me','_blank')">✈ TELEGRAM</button>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">$DELAY</div>
+  <div class="footer-disc">
+    $DELAY is a satirical memecoin for entertainment purposes only. Not financial advice. Not any kind of advice. 
+    If you relate too strongly to this page, please close your trading app and drink some water. 
+    © 2025 $DELAY Foundation. "We'll file the paperwork soon."
+  </div>
+</footer>
+
+<!-- BOTTOM TICKER -->
+<div class="bticker" style="padding-bottom: env(safe-area-inset-bottom)">
+  <span class="bticker-inner">
+    📉 @user4821 just said "one more trade" for the 14th time &nbsp;|&nbsp;
+    🕐 Someone set a stop-loss and immediately ignored it &nbsp;|&nbsp;
+    📉 "quitting after this candle closes" — said 6 hours ago &nbsp;|&nbsp;
+    🔴 New member joined: "I just want to break even" &nbsp;|&nbsp;
+    🩸 $DELAY community growing — all still "just watching" &nbsp;|&nbsp;
+    📉 @user4821 just said "one more trade" for the 14th time &nbsp;|&nbsp;
+    🕐 Someone set a stop-loss and immediately ignored it &nbsp;|&nbsp;
+    📉 "quitting after this candle closes" — said 6 hours ago &nbsp;|&nbsp;
+    🔴 New member joined: "I just want to break even" &nbsp;|&nbsp;
+    🩸 $DELAY community growing — all still "just watching" &nbsp;|&nbsp;
+  </span>
+</div>
+
+<script>
+// ── COUNTDOWN (resets when it hits 0, cycling excuse)
+const excuses = [
+  '"just one more trade and I\'m actually done"',
+  '"ok this is ACTUALLY the last one"',
+  '"one more to cover gas fees then I stop"',
+  '"I\'m just going to check the chart real quick"',
+  '"this setup is too good to miss, then I quit"',
+  '"one more trade and I\'m going to sleep"',
+  '"after this I\'m done for real this time"',
+  '"just waiting for confirmation then I\'m out"',
+  '"one more and I\'ll be up enough to quit"',
+  '"I\'m not even trading, just watching"',
+];
+let excIdx = 0;
+let total = Math.floor(Math.random() * 5400) + 900;
+
+function updateClock() {
+  if (total <= 0) {
+    total = Math.floor(Math.random() * 3600) + 600;
+    excIdx = (excIdx + 1) % excuses.length;
+    const el = document.getElementById('excuse-rot');
+    el.style.opacity = '0';
+    setTimeout(() => { el.textContent = excuses[excIdx]; el.style.opacity = '1'; }, 400);
+  }
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  document.getElementById('cd-h').textContent = String(h).padStart(2,'0');
+  document.getElementById('cd-m').textContent = String(m).padStart(2,'0');
+  document.getElementById('cd-s').textContent = String(s).padStart(2,'0');
+  total--;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ── SCROLL REVEAL
+const obs = new IntersectionObserver(entries => {
+  entries.forEach((e, i) => {
+    if (e.isIntersecting) setTimeout(() => e.target.classList.add('on'), i * 55);
+  });
+}, { threshold: 0.07 });
+document.querySelectorAll('.reveal').forEach(r => obs.observe(r));
+
+// ── TOKENOMICS BARS
+const tokObs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting)
+      document.querySelectorAll('.tok-fill').forEach(b => b.style.width = b.dataset.pct + '%');
+  });
+}, { threshold: 0.3 });
+const tokEl = document.getElementById('tok-rows');
+if (tokEl) tokObs.observe(tokEl);
+
+// ── LIVE HOLDERS COUNTER
+let holders = 12847;
+setInterval(() => {
+  holders += Math.floor(Math.random() * 3);
+  const el = document.getElementById('holders-live');
+  if (el) el.textContent = holders.toLocaleString();
+}, 4000);
+
+// ── LIVE FEED (adds new fake entries)
+const feedMessages = [
+  ['@ser_onemore', 'opened the chart "just to look." has been looking for 2 hours.'],
+  ['@definitelyquitting', 'bought the dip. said it\'s different this time.'],
+  ['@4amcandles', 'turned off phone to stop trading. used laptop instead.'],
+  ['@hodlordmcfly', 'set a reminder to quit tomorrow. snoozed it.'],
+  ['@notme_itsthemarket', 'took a loss and said "that\'s fine, one more will fix it."'],
+  ['@gm_gm_gm', 'has sent 47 GMs today. has not slept.'],
+  ['@breakeven_or_bust', 'is "basically breakeven" (down 40%)'],
+  ['@stoplossbro', 'removed stop loss "just for this one trade."'],
+];
+let fIdx = 0;
+setInterval(() => {
+  const feed = document.getElementById('live-feed');
+  if (!feed) return;
+  const [user, msg] = feedMessages[fIdx % feedMessages.length];
+  fIdx++;
+  const item = document.createElement('div');
+  item.className = 'feed-item';
+  item.innerHTML = `<div class="feed-dot"></div><div class="feed-text"><b>${user}</b> ${msg}</div><div class="feed-time">just now</div>`;
+  feed.insertBefore(item, feed.firstChild);
+  if (feed.children.length > 8) feed.removeChild(feed.lastChild);
+  // age existing
+  [...feed.querySelectorAll('.feed-time')].forEach((t, i) => {
+    if (i > 0) t.textContent = (i * 3) + 'm ago';
+  });
+}, 7000);
+
+// ── BUY BUTTON
+const buyMsgs = [
+  'Connecting wallet...\n\nYou said this was the last one, remember?',
+  'Transaction confirmed.\n\nJust one more after this one, right?',
+  'Processing...\n\nYour stop-loss has been noted and will be ignored.',
+  'Done! You now hold $DELAY.\n\nCongratulations on your final trade. 🩸',
+];
+let buyIdx = 0;
+function buyClick() { alert(buyMsgs[buyIdx++ % buyMsgs.length]); }
+
+// ── QUIT BUTTON
+let quitCount = 0;
+function quitClick() {
+  quitCount++;
+  const msgs = [
+    'Are you sure? (attempt #' + quitCount + ')',
+    'Really quitting this time?',
+    'Last chance to check the chart first...',
+    'Fine. But the price just moved.',
+    'We believe you. (you\'ll be back)',
+  ];
+  const msg = msgs[Math.min(quitCount - 1, msgs.length - 1)];
+  if (!confirm(msg)) {
+    alert('Thought so. Welcome back. 🩸');
+  } else if (quitCount >= 3) {
+    setTimeout(() => alert('The price just pumped 40% btw.'), 800);
+  }
+}
+</script>
+</body>
+</html>
